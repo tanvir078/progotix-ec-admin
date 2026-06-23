@@ -1,4 +1,11 @@
-const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api').replace(/\/$/, '');
+const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '');
+
+if (!API_BASE_URL) {
+  throw new Error('VITE_API_BASE_URL environment variable is required');
+}
+
+// Import error handler for retry logic and timeouts
+import { errorHandler } from './errorHandler';
 
 function normalizePath(path) {
   if (!path || path === '/admin') return '/admin';
@@ -66,31 +73,52 @@ export function adminPathToSpa(path) {
 }
 
 export async function apiRequest(path, options = {}) {
-  const body = requestBody(options.body, options.forceFormData);
+  const { 
+    maxRetries = 3, 
+    timeout = 30000,
+    ...requestOptions 
+  } = options;
 
-  const response = await fetch(buildUrl(path, options.params), {
-    method: options.method || 'GET',
-    headers: {
-      Accept: 'application/json',
-      ...payloadHeaders(body),
-      ...(options.headers || {}),
+  const body = requestBody(requestOptions.body, requestOptions.forceFormData);
+  const url = buildUrl(path, requestOptions.params);
+
+  return errorHandler.executeWithRetry(
+    async () => {
+      const response = await fetch(url, {
+        method: requestOptions.method || 'GET',
+        headers: {
+          Accept: 'application/json',
+          ...payloadHeaders(body),
+          ...(requestOptions.headers || {}),
+        },
+        body,
+      });
+
+      const contentType = response.headers.get('content-type') || '';
+      const payload = contentType.includes('application/json') 
+        ? await response.json() 
+        : await response.text();
+
+      if (!response.ok) {
+        const error = new Error(
+          typeof payload === 'object'
+            ? payload.message || Object.values(payload.errors || {})?.flat()?.[0]
+            : payload
+        );
+        error.status = response.status;
+        error.payload = payload;
+        error.url = url;
+        throw error;
+      }
+
+      return payload;
     },
-    body,
-  });
-
-  const contentType = response.headers.get('content-type') || '';
-  const payload = contentType.includes('application/json') ? await response.json() : await response.text();
-
-  if (!response.ok) {
-    const message = typeof payload === 'object'
-      ? payload.message || Object.values(payload.errors || {})?.flat()?.[0]
-      : payload;
-    const error = new Error(message || 'Request failed.');
-    error.payload = payload;
-    throw error;
-  }
-
-  return payload;
+    { 
+      maxRetries, 
+      timeout, 
+      context: `${requestOptions.method || 'GET'} ${path}` 
+    }
+  );
 }
 
 export function formDataWithMethod(formData, method) {

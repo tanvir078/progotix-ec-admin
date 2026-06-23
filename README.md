@@ -1,6 +1,6 @@
-# React + Vite
+# Progotix Admin Dashboard
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Professional admin dashboard for managing the complete Progotix e-commerce platform.
 
 Currently, two official plugins are available:
 

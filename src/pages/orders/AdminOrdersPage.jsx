@@ -3,41 +3,47 @@ import { useState } from 'react';
 import AdminLayout, { AdminCard, StatusBadge } from '@/components/AdminLayout';
 import StatCard from '@/components/ui/StatCard';
 import FilterBar from '@/components/ui/FilterBar';
-import Button from '@/components/ui/Button';
-import { ShoppingCart, Package, AlertTriangle, DollarSign, Clock, CheckCircle, XCircle, Eye, Printer, MoreHorizontal } from 'lucide-react';
+import { ShoppingCart, Package, AlertTriangle, DollarSign, Clock, CheckCircle, Eye } from 'lucide-react';
 
 function money(value) {
     return `$${Number(value ?? 0).toFixed(2)}`;
 }
 
-export default function AdminOrdersPage({ orders = [], filters = {}, status }) {
-    const [q, setQ] = useState(filters.q ?? '');
-    const [orderStatus, setOrderStatus] = useState(filters.status ?? '');
-    const [paymentStatus, setPaymentStatus] = useState(filters.payment_status ?? '');
-    const [paymentMethod, setPaymentMethod] = useState(filters.payment_method ?? '');
-    const [fulfillmentStatus, setFulfillmentStatus] = useState(filters.fulfillment_status ?? '');
+export default function AdminOrdersPage({ data = [], meta = {}, filters = {}, status }) {
+    const orders = Array.isArray(data) ? data : [];
+    const [search, setSearch] = useState(filters.search ?? '');
+    const [statusFilter, setStatusFilter] = useState(filters.status ?? '');
+    const [startDate, setStartDate] = useState(filters.start_date ?? '');
+    const [endDate, setEndDate] = useState(filters.end_date ?? '');
 
     const filter = (event) => {
         event.preventDefault();
-        router.get('/admin/orders', { q, status: orderStatus, payment_status: paymentStatus, payment_method: paymentMethod, fulfillment_status: fulfillmentStatus }, { preserveState: true });
+        router.get('/admin/orders', { 
+            search, 
+            status: statusFilter, 
+            start_date: startDate, 
+            end_date: endDate 
+        }, { preserveState: true });
     };
 
     const resetFilters = () => {
-        setQ('');
-        setOrderStatus('');
-        setPaymentStatus('');
-        setPaymentMethod('');
-        setFulfillmentStatus('');
+        setSearch('');
+        setStatusFilter('');
+        setStartDate('');
+        setEndDate('');
         router.get('/admin/orders', {}, { preserveState: true });
     };
 
-    const updateStatus = (order, value) => {
-        router.patch(`/admin/orders/${order.id}/status`, { order_status: value }, { preserveScroll: true });
+    const updateStatus = (order, newStatus) => {
+        router.put(`/admin/orders/${order.id}/status`, { 
+            status: newStatus 
+        }, { preserveScroll: true });
     };
 
     const totalOrders = orders.length;
-    const pendingOrders = orders.filter(o => (o.order_status || o.status) === 'pending').length;
-    const processingOrders = orders.filter(o => ['confirmed', 'processing'].includes(o.order_status || o.status)).length;
+    const pendingOrders = orders.filter(o => o.status === 'pending').length;
+    const processingOrders = orders.filter(o => o.status === 'processing').length;
+    const completedOrders = orders.filter(o => o.status === 'delivered').length;
     const totalRevenue = orders.reduce((sum, o) => sum + Number(o.total_amount || 0), 0);
 
     return (
@@ -50,70 +56,35 @@ export default function AdminOrdersPage({ orders = [], filters = {}, status }) {
 
             <div className="mb-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
                 <StatCard label="Total Orders" value={totalOrders} icon={ShoppingCart} />
-                <StatCard label="Pending" value={pendingOrders} icon={Clock} />
-                <StatCard label="Processing" value={processingOrders} icon={Package} />
+                <StatCard label="Pending" value={pendingOrders} icon={Clock} color="warning" />
+                <StatCard label="Processing" value={processingOrders} icon={Package} color="info" />
+                <StatCard label="Completed" value={completedOrders} icon={CheckCircle} color="success" />
                 <StatCard label="Total Revenue" value={money(totalRevenue)} icon={DollarSign} />
             </div>
 
             <AdminCard title={`Orders (${orders.length})`}>
                 <FilterBar
-                    searchValue={q}
-                    onSearchChange={setQ}
-                    searchPlaceholder="Search order, customer, phone, tracking..."
+                    searchValue={search}
+                    onSearchChange={setSearch}
+                    searchPlaceholder="Search order ID, customer, phone..."
                     filters={[
                         {
                             key: 'status',
-                            value: orderStatus,
-                            onChange: setOrderStatus,
+                            value: statusFilter,
+                            onChange: setStatusFilter,
                             placeholder: 'All statuses',
                             options: [
                                 { value: 'pending', label: 'Pending' },
-                                { value: 'confirmed', label: 'Confirmed' },
                                 { value: 'processing', label: 'Processing' },
-                                { value: 'completed', label: 'Completed' },
-                                { value: 'cancelled', label: 'Cancelled' },
-                            ],
-                        },
-                        {
-                            key: 'payment_status',
-                            value: paymentStatus,
-                            onChange: setPaymentStatus,
-                            placeholder: 'All payments',
-                            options: [
-                                { value: 'pending', label: 'Pending' },
-                                { value: 'paid', label: 'Paid' },
-                                { value: 'unpaid', label: 'Unpaid' },
-                                { value: 'partially_refunded', label: 'Partially Refunded' },
-                                { value: 'refunded', label: 'Refunded' },
-                            ],
-                        },
-                        {
-                            key: 'payment_method',
-                            value: paymentMethod,
-                            onChange: setPaymentMethod,
-                            placeholder: 'All methods',
-                            options: [
-                                { value: 'cod', label: 'COD' },
-                                { value: 'stripe', label: 'Stripe' },
-                            ],
-                        },
-                        {
-                            key: 'fulfillment_status',
-                            value: fulfillmentStatus,
-                            onChange: setFulfillmentStatus,
-                            placeholder: 'All fulfillment',
-                            options: [
-                                { value: 'unfulfilled', label: 'Unfulfilled' },
-                                { value: 'packed', label: 'Packed' },
                                 { value: 'shipped', label: 'Shipped' },
                                 { value: 'delivered', label: 'Delivered' },
-                                { value: 'returned', label: 'Returned' },
+                                { value: 'cancelled', label: 'Cancelled' },
                             ],
                         },
                     ]}
                     onApply={filter}
                     onReset={resetFilters}
-                    className="lg:grid-cols-[1fr_160px_160px_160px_auto]"
+                    className="md:grid-cols-[1fr_180px_auto]"
                 />
 
                 <div className="overflow-hidden rounded-2xl border border-slate-200">
@@ -123,9 +94,7 @@ export default function AdminOrdersPage({ orders = [], filters = {}, status }) {
                                 <tr>
                                     <th className="px-5 py-4">Order ID</th>
                                     <th className="px-5 py-4">Customer</th>
-                                    <th className="px-5 py-4">Order</th>
-                                    <th className="px-5 py-4">Payment</th>
-                                    <th className="px-5 py-4">Fulfillment</th>
+                                    <th className="px-5 py-4">Status</th>
                                     <th className="px-5 py-4">Items</th>
                                     <th className="px-5 py-4 text-right">Total</th>
                                     <th className="px-5 py-4 text-right">Actions</th>
@@ -134,7 +103,7 @@ export default function AdminOrdersPage({ orders = [], filters = {}, status }) {
                             <tbody className="divide-y divide-slate-100 bg-white">
                                 {orders.length === 0 && (
                                     <tr>
-                                        <td colSpan="8" className="px-5 py-10 text-center text-sm font-bold text-slate-400">
+                                        <td colSpan="6" className="px-5 py-10 text-center text-sm font-bold text-slate-400">
                                             No orders found.
                                         </td>
                                     </tr>
@@ -142,46 +111,38 @@ export default function AdminOrdersPage({ orders = [], filters = {}, status }) {
                                 {orders.map((order) => (
                                     <tr key={order.id} className="transition hover:bg-slate-50">
                                         <td className="px-5 py-4">
-                                            <Link to={`/orders/${order.id}`} className="font-black text-primary hover:underline">
-                                                {order.display_number || `#${order.id}`}
+                                            <Link to={`/admin/orders/${order.id}`} className="font-black text-primary hover:underline">
+                                                #{order.id}
                                             </Link>
                                             <p className="mt-1 text-xs font-semibold text-slate-500">
                                                 {new Date(order.created_at).toLocaleDateString()}
                                             </p>
                                         </td>
                                         <td className="px-5 py-4">
-                                            <p className="font-semibold text-slate-900">{order.customer_snapshot?.name ?? order.customer_name ?? order.user?.name ?? 'Customer'}</p>
-                                            <p className="text-xs text-slate-500">{order.customer_snapshot?.email ?? order.customer_email ?? order.user?.email ?? order.customer_phone ?? order.phone}</p>
+                                            <p className="font-semibold text-slate-900">{order.user?.name ?? 'Customer'}</p>
+                                            <p className="text-xs text-slate-500">{order.phone || order.user?.email}</p>
                                         </td>
                                         <td className="px-5 py-4">
                                             <select
-                                                value={order.order_status || order.status}
+                                                value={order.status}
                                                 onChange={(event) => updateStatus(order, event.target.value)}
                                                 className="rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-black outline-none focus:border-primary focus:ring-1 focus:ring-primary"
                                             >
                                                 <option value="pending">Pending</option>
-                                                <option value="confirmed">Confirmed</option>
                                                 <option value="processing">Processing</option>
-                                                <option value="completed">Completed</option>
+                                                <option value="shipped">Shipped</option>
+                                                <option value="delivered">Delivered</option>
                                                 <option value="cancelled">Cancelled</option>
                                             </select>
                                         </td>
                                         <td className="px-5 py-4">
-                                            <StatusBadge value={order.payment_status} />
-                                            <p className="mt-1 text-xs font-semibold uppercase text-slate-500">{order.payment_method}</p>
+                                            <p className="font-semibold">{order.items?.length || 0} items</p>
                                         </td>
-                                        <td className="px-5 py-4">
-                                            <StatusBadge value={order.fulfillment_status || 'unfulfilled'} />
-                                            {order.shipments?.[0]?.tracking_number && (
-                                                <p className="mt-1 text-xs font-semibold text-slate-500">{order.shipments[0].tracking_number}</p>
-                                            )}
-                                        </td>
-                                        <td className="px-5 py-4 font-semibold">{order.items_count}</td>
                                         <td className="px-5 py-4 text-right font-black">{money(order.total_amount)}</td>
                                         <td className="px-5 py-4 text-right">
                                             <div className="flex justify-end gap-2">
                                                 <Link
-                                                    to={`/orders/${order.id}`}
+                                                    to={`/admin/orders/${order.id}`}
                                                     className="rounded-xl bg-slate-50 p-2 text-slate-600 transition hover:bg-slate-100"
                                                     title="View Details"
                                                 >
@@ -195,6 +156,32 @@ export default function AdminOrdersPage({ orders = [], filters = {}, status }) {
                         </table>
                     </div>
                 </div>
+
+                {meta && meta.last_page > 1 && (
+                    <div className="mt-4 flex items-center justify-between">
+                        <p className="text-sm font-semibold text-slate-600">
+                            Showing {orders.length} of {meta.total} orders
+                        </p>
+                        <div className="flex gap-2">
+                            {meta.current_page > 1 && (
+                                <button
+                                    onClick={() => router.get('/admin/orders', { ...filters, page: meta.current_page - 1 })}
+                                    className="rounded-lg bg-slate-100 px-3 py-1.5 text-xs font-black text-slate-700 transition hover:bg-slate-200"
+                                >
+                                    Previous
+                                </button>
+                            )}
+                            {meta.current_page < meta.last_page && (
+                                <button
+                                    onClick={() => router.get('/admin/orders', { ...filters, page: meta.current_page + 1 })}
+                                    className="rounded-lg bg-primary px-3 py-1.5 text-xs font-black text-white transition hover:bg-primary-dark"
+                                >
+                                    Next
+                                </button>
+                            )}
+                        </div>
+                    </div>
+                )}
             </AdminCard>
         </AdminLayout>
     );

@@ -13,17 +13,29 @@ import {
   Search, 
   User, 
   Shield,
-  Save
+  Save,
+  Globe,
+  DollarSign,
+  Megaphone,
+  LayoutGrid,
+  Users,
+  CheckCircle
 } from 'lucide-react';
 
 const tabs = [
   { id: 'general', label: 'General', icon: Settings },
   { id: 'store', label: 'Store Info', icon: Store },
+  { id: 'languages', label: 'Languages', icon: Globe },
+  { id: 'currencies', label: 'Currencies', icon: DollarSign },
+  { id: 'announcements', label: 'Announcements', icon: Megaphone },
+  { id: 'mega-menu', label: 'Mega Menu', icon: LayoutGrid },
   { id: 'payments', label: 'Payments', icon: CreditCard },
   { id: 'shipping', label: 'Shipping', icon: Truck },
   { id: 'tax', label: 'Tax', icon: Percent },
   { id: 'notifications', label: 'Notifications', icon: Mail },
+  { id: 'newsletter', label: 'Newsletter', icon: Users },
   { id: 'seo', label: 'SEO', icon: Search },
+  { id: 'trust-badges', label: 'Trust Badges', icon: CheckCircle },
   { id: 'profile', label: 'Admin Profile', icon: User },
 ];
 
@@ -31,7 +43,7 @@ export default function AdminSettingsPage({ settings = {}, status }) {
     const [activeTab, setActiveTab] = useState('general');
     const [form, setForm] = useState({
         // General
-        site_name: settings.site_name ?? 'Progotix',
+        site_name: settings.site_name ?? 'Kids Mela',
         site_description: settings.site_description ?? '',
         timezone: settings.timezone ?? 'UTC',
         language: settings.language ?? 'en',
@@ -46,10 +58,10 @@ export default function AdminSettingsPage({ settings = {}, status }) {
         // Payments
         stripe_enabled: Boolean(settings.stripe_enabled),
         stripe_public_key: settings.stripe_public_key ?? '',
-        stripe_secret_key: settings.stripe_secret_key ?? '',
+        // NOTE: stripe_secret_key is configured server-side only for security
         paypal_enabled: Boolean(settings.paypal_enabled),
         paypal_client_id: settings.paypal_client_id ?? '',
-        paypal_secret_key: settings.paypal_secret_key ?? '',
+        // NOTE: paypal_secret_key is configured server-side only for security
         cod_enabled: Boolean(settings.cod_enabled),
         
         // Shipping
@@ -73,6 +85,30 @@ export default function AdminSettingsPage({ settings = {}, status }) {
         // Profile
         admin_name: settings.admin_name ?? '',
         admin_email: settings.admin_email ?? '',
+
+        // Languages
+        enabled_languages: settings.enabled_languages ?? ['en', 'bn'],
+        default_language: settings.default_language ?? 'en',
+
+        // Currencies
+        enabled_currencies: settings.enabled_currencies ?? ['USD', 'BDT'],
+        default_currency: settings.default_currency ?? 'USD',
+
+        // Announcements
+        announcement_enabled: Boolean(settings.announcement_enabled),
+        announcement_text: settings.announcement_text ?? '',
+        announcement_type: settings.announcement_type ?? 'promo',
+        announcement_bg_color: settings.announcement_bg_color ?? 'from-rose-600 to-fuchsia-700',
+
+        // Newsletter
+        newsletter_enabled: Boolean(settings.newsletter_enabled),
+        newsletter_welcome_email: settings.newsletter_welcome_email ?? '',
+
+        // Trust Badges
+        show_secure_payment: Boolean(settings.show_secure_payment ?? true),
+        show_fast_delivery: Boolean(settings.show_fast_delivery ?? true),
+        show_easy_returns: Boolean(settings.show_easy_returns ?? true),
+        show_quality_guaranteed: Boolean(settings.show_quality_guaranteed ?? true),
     });
     const [errors, setErrors] = useState({});
 
@@ -80,7 +116,7 @@ export default function AdminSettingsPage({ settings = {}, status }) {
 
     const submit = (event) => {
         event.preventDefault();
-        router.post('/admin/settings', form, { preserveScroll: true, onError: setErrors });
+        router.put('/admin/settings', form, { preserveScroll: true, onError: setErrors });
     };
 
     return (
@@ -211,14 +247,9 @@ export default function AdminSettingsPage({ settings = {}, status }) {
                                                 error={errors.stripe_public_key}
                                                 placeholder="pk_live_..."
                                             />
-                                            <FormInput
-                                                label="Stripe Secret Key"
-                                                type="password"
-                                                value={form.stripe_secret_key}
-                                                onChange={(e) => setField('stripe_secret_key', e.target.value)}
-                                                error={errors.stripe_secret_key}
-                                                placeholder="sk_live_..."
-                                            />
+                                            <div className="rounded-lg bg-amber-50 border border-amber-200 p-3 text-sm text-amber-700">
+                                                🔒 Stripe Secret Key is configured securely via server environment variables.
+                                            </div>
                                         </div>
                                     </div>
                                     <div className="rounded-xl border border-slate-200 p-4">
@@ -239,14 +270,9 @@ export default function AdminSettingsPage({ settings = {}, status }) {
                                                 error={errors.paypal_client_id}
                                                 placeholder="PayPal client ID"
                                             />
-                                            <FormInput
-                                                label="PayPal Secret Key"
-                                                type="password"
-                                                value={form.paypal_secret_key}
-                                                onChange={(e) => setField('paypal_secret_key', e.target.value)}
-                                                error={errors.paypal_secret_key}
-                                                placeholder="PayPal secret"
-                                            />
+                                            <div className="rounded-lg bg-amber-50 border border-amber-200 p-3 text-sm text-amber-700">
+                                                🔒 PayPal Secret Key is configured securely via server environment variables.
+                                            </div>
                                         </div>
                                     </div>
                                     <label className="flex items-center justify-between rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 cursor-pointer">
@@ -392,6 +418,207 @@ export default function AdminSettingsPage({ settings = {}, status }) {
                                         onChange={(e) => setField('admin_email', e.target.value)}
                                         error={errors.admin_email}
                                     />
+                                </div>
+                            </AdminCard>
+                        )}
+
+                        {activeTab === 'languages' && (
+                            <AdminCard title="Language Settings" icon={<Globe className="h-5 w-5 text-slate-400" />}>
+                                <div className="space-y-4">
+                                    <div>
+                                        <label className="mb-2 block text-xs font-black text-slate-600">Enabled Languages</label>
+                                        <div className="space-y-2">
+                                            {['en', 'bn'].map((lang) => (
+                                                <label key={lang} className="flex items-center gap-2 cursor-pointer">
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={form.enabled_languages.includes(lang)}
+                                                        onChange={(e) => {
+                                                            if (e.target.checked) {
+                                                                setField('enabled_languages', [...form.enabled_languages, lang]);
+                                                            } else {
+                                                                setField('enabled_languages', form.enabled_languages.filter(l => l !== lang));
+                                                            }
+                                                        }}
+                                                        className="h-4 w-4 rounded border-slate-300 text-primary focus:ring-primary"
+                                                    />
+                                                    <span className="text-sm font-semibold text-slate-700">
+                                                        {lang === 'en' ? 'English' : 'বাংলা'}
+                                                    </span>
+                                                </label>
+                                            ))}
+                                        </div>
+                                    </div>
+                                    <FormInput
+                                        label="Default Language"
+                                        value={form.default_language}
+                                        onChange={(e) => setField('default_language', e.target.value)}
+                                        error={errors.default_language}
+                                    />
+                                </div>
+                            </AdminCard>
+                        )}
+
+                        {activeTab === 'currencies' && (
+                            <AdminCard title="Currency Settings" icon={<DollarSign className="h-5 w-5 text-slate-400" />}>
+                                <div className="space-y-4">
+                                    <div>
+                                        <label className="mb-2 block text-xs font-black text-slate-600">Enabled Currencies</label>
+                                        <div className="space-y-2">
+                                            {['USD', 'BDT'].map((currency) => (
+                                                <label key={currency} className="flex items-center gap-2 cursor-pointer">
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={form.enabled_currencies.includes(currency)}
+                                                        onChange={(e) => {
+                                                            if (e.target.checked) {
+                                                                setField('enabled_currencies', [...form.enabled_currencies, currency]);
+                                                            } else {
+                                                                setField('enabled_currencies', form.enabled_currencies.filter(c => c !== currency));
+                                                            }
+                                                        }}
+                                                        className="h-4 w-4 rounded border-slate-300 text-primary focus:ring-primary"
+                                                    />
+                                                    <span className="text-sm font-semibold text-slate-700">{currency}</span>
+                                                </label>
+                                            ))}
+                                        </div>
+                                    </div>
+                                    <FormInput
+                                        label="Default Currency"
+                                        value={form.default_currency}
+                                        onChange={(e) => setField('default_currency', e.target.value)}
+                                        error={errors.default_currency}
+                                    />
+                                </div>
+                            </AdminCard>
+                        )}
+
+                        {activeTab === 'announcements' && (
+                            <AdminCard title="Announcement Banner" icon={<Megaphone className="h-5 w-5 text-slate-400" />}>
+                                <div className="space-y-4">
+                                    <label className="flex items-center gap-2 cursor-pointer">
+                                        <input
+                                            type="checkbox"
+                                            checked={form.announcement_enabled}
+                                            onChange={(e) => setField('announcement_enabled', e.target.checked)}
+                                            className="h-4 w-4 rounded border-slate-300 text-primary focus:ring-primary"
+                                        />
+                                        <span className="text-sm font-semibold text-slate-700">Enable Announcement Banner</span>
+                                    </label>
+                                    <div>
+                                        <label className="mb-1 block text-xs font-black text-slate-600">Announcement Text</label>
+                                        <textarea
+                                            value={form.announcement_text}
+                                            onChange={(e) => setField('announcement_text', e.target.value)}
+                                            className="min-h-20 w-full rounded-xl border border-slate-200 px-4 py-3 text-sm font-semibold outline-none focus:border-primary focus:ring-1 focus:ring-primary"
+                                            placeholder="Enter announcement message"
+                                        />
+                                    </div>
+                                    <FormInput
+                                        label="Announcement Type"
+                                        value={form.announcement_type}
+                                        onChange={(e) => setField('announcement_type', e.target.value)}
+                                        error={errors.announcement_type}
+                                    />
+                                    <FormInput
+                                        label="Background Gradient"
+                                        value={form.announcement_bg_color}
+                                        onChange={(e) => setField('announcement_bg_color', e.target.value)}
+                                        error={errors.announcement_bg_color}
+                                        placeholder="from-rose-600 to-fuchsia-700"
+                                    />
+                                </div>
+                            </AdminCard>
+                        )}
+
+                        {activeTab === 'mega-menu' && (
+                            <AdminCard title="Mega Menu Configuration" icon={<LayoutGrid className="h-5 w-5 text-slate-400" />}>
+                                <div className="space-y-4">
+                                    <p className="text-sm text-slate-600">Configure mega menu categories and subcategories. This feature allows you to create rich category navigation with images.</p>
+                                    <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                                        <p className="text-sm font-semibold text-slate-700">Current Structure:</p>
+                                        <ul className="mt-2 space-y-1 text-sm text-slate-600">
+                                            <li>• Men (Shirts, T-Shirts, Pants, Jackets, Shoes)</li>
+                                            <li>• Women (Dresses, Tops, Skirts, Jackets, Shoes)</li>
+                                            <li>• Kids (Boys, Girls, Infants)</li>
+                                            <li>• Accessories (Bags, Watches, Jewelry, Sunglasses)</li>
+                                        </ul>
+                                    </div>
+                                    <Button type="button" variant="secondary">Manage Categories (Coming Soon)</Button>
+                                </div>
+                            </AdminCard>
+                        )}
+
+                        {activeTab === 'newsletter' && (
+                            <AdminCard title="Newsletter Settings" icon={<Users className="h-5 w-5 text-slate-400" />}>
+                                <div className="space-y-4">
+                                    <label className="flex items-center gap-2 cursor-pointer">
+                                        <input
+                                            type="checkbox"
+                                            checked={form.newsletter_enabled}
+                                            onChange={(e) => setField('newsletter_enabled', e.target.checked)}
+                                            className="h-4 w-4 rounded border-slate-300 text-primary focus:ring-primary"
+                                        />
+                                        <span className="text-sm font-semibold text-slate-700">Enable Newsletter Subscription</span>
+                                    </label>
+                                    <div>
+                                        <label className="mb-1 block text-xs font-black text-slate-600">Welcome Email Template</label>
+                                        <textarea
+                                            value={form.newsletter_welcome_email}
+                                            onChange={(e) => setField('newsletter_welcome_email', e.target.value)}
+                                            className="min-h-24 w-full rounded-xl border border-slate-200 px-4 py-3 text-sm font-semibold outline-none focus:border-primary focus:ring-1 focus:ring-primary"
+                                            placeholder="Enter welcome email content"
+                                        />
+                                    </div>
+                                    <Button type="button" variant="secondary">View Subscribers (Coming Soon)</Button>
+                                    <Button type="button" variant="secondary">Create Campaign (Coming Soon)</Button>
+                                </div>
+                            </AdminCard>
+                        )}
+
+                        {activeTab === 'trust-badges' && (
+                            <AdminCard title="Trust Badges Configuration" icon={<CheckCircle className="h-5 w-5 text-slate-400" />}>
+                                <div className="space-y-4">
+                                    <p className="text-sm text-slate-600">Configure which trust badges to display in the footer and throughout the site.</p>
+                                    <div className="space-y-3">
+                                        <label className="flex items-center gap-2 cursor-pointer">
+                                            <input
+                                                type="checkbox"
+                                                checked={form.show_secure_payment}
+                                                onChange={(e) => setField('show_secure_payment', e.target.checked)}
+                                                className="h-4 w-4 rounded border-slate-300 text-primary focus:ring-primary"
+                                            />
+                                            <span className="text-sm font-semibold text-slate-700">Show Secure Payment Badge</span>
+                                        </label>
+                                        <label className="flex items-center gap-2 cursor-pointer">
+                                            <input
+                                                type="checkbox"
+                                                checked={form.show_fast_delivery}
+                                                onChange={(e) => setField('show_fast_delivery', e.target.checked)}
+                                                className="h-4 w-4 rounded border-slate-300 text-primary focus:ring-primary"
+                                            />
+                                            <span className="text-sm font-semibold text-slate-700">Show Fast Delivery Badge</span>
+                                        </label>
+                                        <label className="flex items-center gap-2 cursor-pointer">
+                                            <input
+                                                type="checkbox"
+                                                checked={form.show_easy_returns}
+                                                onChange={(e) => setField('show_easy_returns', e.target.checked)}
+                                                className="h-4 w-4 rounded border-slate-300 text-primary focus:ring-primary"
+                                            />
+                                            <span className="text-sm font-semibold text-slate-700">Show Easy Returns Badge</span>
+                                        </label>
+                                        <label className="flex items-center gap-2 cursor-pointer">
+                                            <input
+                                                type="checkbox"
+                                                checked={form.show_quality_guaranteed}
+                                                onChange={(e) => setField('show_quality_guaranteed', e.target.checked)}
+                                                className="h-4 w-4 rounded border-slate-300 text-primary focus:ring-primary"
+                                            />
+                                            <span className="text-sm font-semibold text-slate-700">Show Quality Guaranteed Badge</span>
+                                        </label>
+                                    </div>
                                 </div>
                             </AdminCard>
                         )}

@@ -35,6 +35,7 @@ import {
   SlidersHorizontal,
   Layers,
   MessageCircleQuestion,
+  UserCircle,
 } from 'lucide-react';
 import StatusBadge from './ui/Badge';
 
@@ -55,6 +56,7 @@ const mainNavItems = [
   { label: 'Reports', href: '/admin/analytics', match: /^\/admin\/(?:analytics|reports)/, icon: BarChart3 },
   { label: 'Staff', href: '/admin/staff', match: /^\/admin\/(?:staff|admin-users|roles-permissions|activity-logs)/, icon: Shield },
   { label: 'Settings', href: '/admin/settings', match: /^\/admin\/(?:settings|general-settings|logo-favicon|seo-settings|email-settings|sms-settings|currency-settings|language-settings|maintenance-mode)/, icon: Settings },
+  { label: 'Profile', href: '/admin/profile', match: /^\/admin\/profile/, icon: UserCircle },
 ];
 
 const moduleTabGroups = [
@@ -188,6 +190,7 @@ const moduleTabGroups = [
     tabs: [
       { label: 'Staff', href: '/admin/staff', match: /^\/admin\/staff/ },
       { label: 'Admin Users', href: '/admin/admin-users', match: /^\/admin\/admin-users/ },
+      { label: 'Profile', href: '/admin/profile', match: /^\/admin\/profile/ },
       { label: 'Roles', href: '/admin/roles-permissions', match: /^\/admin\/roles-permissions/ },
       { label: 'Activity Logs', href: '/admin/activity-logs', match: /^\/admin\/activity-logs/ },
     ],
@@ -200,6 +203,7 @@ const moduleTabGroups = [
       { label: 'Logo & Favicon', href: '/admin/logo-favicon', match: /^\/admin\/logo-favicon/ },
       { label: 'SEO', href: '/admin/seo-settings', match: /^\/admin\/seo-settings/ },
       { label: 'Email', href: '/admin/email-settings', match: /^\/admin\/email-settings/ },
+      { label: 'Profile', href: '/admin/profile', match: /^\/admin\/profile/ },
       { label: 'SMS', href: '/admin/sms-settings', match: /^\/admin\/sms-settings/ },
       { label: 'Currency', href: '/admin/currency-settings', match: /^\/admin\/currency-settings/ },
       { label: 'Language', href: '/admin/language-settings', match: /^\/admin\/language-settings/ },
@@ -208,7 +212,7 @@ const moduleTabGroups = [
   },
 ];
 
-export default function AdminLayout({ title, eyebrow = 'Progotix Admin', actions, children }) {
+export default function AdminLayout({ title, eyebrow = 'Kids Mela Admin', actions, children }) {
     const { props, url } = usePage();
     const user = props.auth?.user;
     const flashStatus = props.flash?.status || props.status;
@@ -230,7 +234,7 @@ export default function AdminLayout({ title, eyebrow = 'Progotix Admin', actions
     const activeModuleTabs = moduleTabGroups.find((group) => group.match.test(url))?.tabs || [];
 
     const nav = (
-        <nav className="space-y-1 overflow-y-auto">
+        <nav className="space-y-1">
             {mainNavItems.map((item) => {
                 const active = item.match.test(url);
                 const Icon = item.icon;
@@ -251,6 +255,14 @@ export default function AdminLayout({ title, eyebrow = 'Progotix Admin', actions
                     </Link>
                 );
             })}
+            <button
+                type="button"
+                onClick={logout}
+                className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm font-semibold text-slate-300 transition hover:bg-white/10 hover:text-white"
+            >
+                <LogOut className="h-4 w-4 shrink-0" />
+                <span className="truncate">Log out</span>
+            </button>
         </nav>
     );
 
@@ -282,41 +294,22 @@ export default function AdminLayout({ title, eyebrow = 'Progotix Admin', actions
         <div className="min-h-screen bg-background text-slate-950">
             <Head title={title} />
 
-            <aside className="fixed inset-y-0 left-0 z-40 hidden w-80 border-r border-white/10 bg-[#1b0a29] px-4 py-5 text-white lg:block">
+            <aside className="fixed inset-y-0 left-0 z-40 hidden w-80 flex-col border-r border-white/10 bg-[#1b0a29] px-4 py-5 text-white lg:flex">
                 <Link href="/admin" className="flex items-center gap-3 rounded-xl px-2 py-2">
                     <div className="grid h-10 w-10 place-items-center rounded-lg bg-accent text-sm font-black text-white">
-                        PX
+                        RF
                     </div>
                     <div>
-                        <span className="block text-sm font-black text-white">Progotix</span>
-                        <span className="block text-xs font-semibold text-slate-400">Enterprise Admin</span>
+                        <span className="block text-sm font-black text-white">Kids Mela</span>
+                        <span className="block text-xs font-semibold text-slate-400">Fashion Admin</span>
                     </div>
                 </Link>
                 <div
                     ref={sidebarScrollRef}
                     onScroll={rememberSidebarScroll}
-                    className="mt-8 max-h-[calc(100vh-200px)] overflow-y-auto pr-1"
+                    className="mt-8 min-h-0 flex-1 overflow-y-auto pr-1"
                 >
                     {nav}
-                </div>
-                <div className="absolute bottom-5 left-4 right-4 rounded-lg border border-white/10 bg-white/5 p-4">
-                    <div className="flex items-center gap-3">
-                        <div className="grid h-10 w-10 place-items-center rounded-full bg-primary text-sm font-black text-white">
-                            {user?.name?.charAt(0) || 'A'}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                            <p className="truncate text-sm font-bold text-white">{user?.name}</p>
-                            <p className="truncate text-xs text-slate-400">{user?.email}</p>
-                        </div>
-                    </div>
-                    <button 
-                        type="button" 
-                        onClick={logout} 
-                        className="mt-3 flex w-full items-center justify-center gap-2 rounded-lg bg-white/10 px-3 py-2 text-xs font-black text-white ring-1 ring-white/10 transition hover:bg-white/15"
-                    >
-                        <LogOut className="h-4 w-4" />
-                        Log out
-                    </button>
                 </div>
             </aside>
 
@@ -358,7 +351,7 @@ export default function AdminLayout({ title, eyebrow = 'Progotix Admin', actions
                         <button type="button" className="absolute inset-0 bg-slate-950/40" onClick={() => setOpen(false)} aria-label="Close menu" />
                         <div className="relative h-full w-80 bg-secondary p-4 shadow-2xl">
                             <div className="mb-6 flex items-center justify-between">
-                                <span className="font-black text-white">Progotix Admin</span>
+                                <span className="font-black text-white">Kids Mela Admin</span>
                                 <button type="button" onClick={() => setOpen(false)} className="rounded-lg p-2 text-slate-300 hover:bg-white/10">
                                     <X className="h-5 w-5" />
                                 </button>

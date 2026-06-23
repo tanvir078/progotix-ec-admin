@@ -22,6 +22,14 @@ const emptyForm = {
     gallery_images: null,
     weight: '',
     size: '',
+    colors: '',
+    fabric: '',
+    fit: '',
+    occasion: '',
+    care_instruction: '',
+    gender: '',
+    age_group: '',
+    season: '',
     delivery_charge: '',
     category_id: '',
     brand_id: '',
@@ -32,6 +40,15 @@ const emptyForm = {
     is_featured: false,
     parent_category_id: '',
 };
+
+function flattenCategoryOptions(categories, parentId = null, level = 0) {
+    return categories
+        .filter((category) => Number(category.parent_id || 0) === Number(parentId || 0))
+        .flatMap((category) => [
+            { ...category, tree_level: level },
+            ...flattenCategoryOptions(categories, category.id, level + 1),
+        ]);
+}
 
 export default function AddProductPage({ categories = [], brands = [], status }) {
     const [form, setForm] = useState(emptyForm);
@@ -45,11 +62,6 @@ export default function AddProductPage({ categories = [], brands = [], status })
         setErrors({});
     };
 
-    const handleParentCategoryChange = (value) => {
-        setField('parent_category_id', value);
-        setField('category_id', '');
-    };
-
     const handleCategoryChange = (value) => {
         const selected = categories.find((category) => String(category.id) === value);
         setField('category_id', value);
@@ -61,9 +73,6 @@ export default function AddProductPage({ categories = [], brands = [], status })
         setProcessing(true);
 
         const data = { ...form };
-        if (!data.category_id && data.parent_category_id) {
-            data.category_id = data.parent_category_id;
-        }
         if (!data.image) delete data.image;
         if (!data.gallery_images) delete data.gallery_images;
         delete data.parent_category_id;
@@ -78,10 +87,7 @@ export default function AddProductPage({ categories = [], brands = [], status })
         });
     };
 
-    const rootCategories = categories.filter((category) => !category.parent_id);
-    const subCategories = form.parent_category_id
-        ? categories.filter((category) => Number(category.parent_id) === Number(form.parent_category_id))
-        : [];
+    const categoryOptions = flattenCategoryOptions(categories);
 
     return (
         <AdminLayout 
@@ -120,34 +126,19 @@ export default function AddProductPage({ categories = [], brands = [], status })
                                 error={errors.sku}
                                 placeholder="Enter SKU code"
                             />
-                            <div className="grid gap-4 sm:grid-cols-2">
-                                <Select
-                                    label="Parent Category"
-                                    value={form.parent_category_id}
-                                    onChange={(e) => handleParentCategoryChange(e.target.value)}
-                                    error={errors.parent_category_id}
-                                >
-                                    <option value="">Select Parent</option>
-                                    {rootCategories.map((category) => (
-                                        <option key={category.id} value={category.id}>
-                                            {category.name}
-                                        </option>
-                                    ))}
-                                </Select>
-                                <Select
-                                    label="Sub Category"
-                                    value={form.category_id}
-                                    onChange={(e) => handleCategoryChange(e.target.value)}
-                                    error={errors.category_id}
-                                >
-                                    <option value="">{form.parent_category_id ? 'Use parent / select sub' : 'Select parent first'}</option>
-                                    {subCategories.map((category) => (
-                                        <option key={category.id} value={category.id}>
-                                            {category.name}
-                                        </option>
-                                    ))}
-                                </Select>
-                            </div>
+                            <Select
+                                label="Product Category"
+                                value={form.category_id}
+                                onChange={(e) => handleCategoryChange(e.target.value)}
+                                error={errors.category_id}
+                            >
+                                <option value="">Select category</option>
+                                {categoryOptions.map((category) => (
+                                    <option key={category.id} value={category.id}>
+                                        {'--'.repeat(category.tree_level)} {category.name}
+                                    </option>
+                                ))}
+                            </Select>
                             <Select
                                 label="Brand"
                                 value={form.brand_id}
@@ -291,6 +282,107 @@ export default function AddProductPage({ categories = [], brands = [], status })
                     </AdminCard>
 
                     <AdminCard 
+                        title="Fashion Attributes" 
+                        icon={<Settings className="h-5 w-5 text-slate-400" />}
+                    >
+                        <div className="space-y-4">
+                            <div className="grid gap-4 sm:grid-cols-2">
+                                <FormInput
+                                    label="Available Sizes"
+                                    value={form.size}
+                                    onChange={(e) => setField('size', e.target.value)}
+                                    error={errors.size}
+                                    placeholder="S, M, L, XL"
+                                />
+                                <FormInput
+                                    label="Available Colors"
+                                    value={form.colors}
+                                    onChange={(e) => setField('colors', e.target.value)}
+                                    error={errors.colors}
+                                    placeholder="Black, White, Navy"
+                                />
+                            </div>
+                            <div className="grid gap-4 sm:grid-cols-2">
+                                <FormInput
+                                    label="Fabric / Material"
+                                    value={form.fabric}
+                                    onChange={(e) => setField('fabric', e.target.value)}
+                                    error={errors.fabric}
+                                    placeholder="Premium cotton"
+                                />
+                                <Select
+                                    label="Fit"
+                                    value={form.fit}
+                                    onChange={(e) => setField('fit', e.target.value)}
+                                    error={errors.fit}
+                                >
+                                    <option value="">Select fit</option>
+                                    <option value="Regular fit">Regular fit</option>
+                                    <option value="Slim fit">Slim fit</option>
+                                    <option value="Relaxed fit">Relaxed fit</option>
+                                    <option value="Oversized fit">Oversized fit</option>
+                                </Select>
+                            </div>
+                            <div className="grid gap-4 sm:grid-cols-3">
+                                <Select
+                                    label="Gender"
+                                    value={form.gender}
+                                    onChange={(e) => setField('gender', e.target.value)}
+                                    error={errors.gender}
+                                >
+                                    <option value="">Select gender</option>
+                                    <option value="Men">Men</option>
+                                    <option value="Women">Women</option>
+                                    <option value="Kids">Kids</option>
+                                    <option value="Unisex">Unisex</option>
+                                </Select>
+                                <Select
+                                    label="Age Group"
+                                    value={form.age_group}
+                                    onChange={(e) => setField('age_group', e.target.value)}
+                                    error={errors.age_group}
+                                >
+                                    <option value="">Select age group</option>
+                                    <option value="Adult">Adult</option>
+                                    <option value="Teen">Teen</option>
+                                    <option value="Kids">Kids</option>
+                                    <option value="Baby">Baby</option>
+                                </Select>
+                                <Select
+                                    label="Season"
+                                    value={form.season}
+                                    onChange={(e) => setField('season', e.target.value)}
+                                    error={errors.season}
+                                >
+                                    <option value="">Select season</option>
+                                    <option value="All Season">All Season</option>
+                                    <option value="Summer">Summer</option>
+                                    <option value="Winter">Winter</option>
+                                    <option value="Eid Collection">Eid Collection</option>
+                                    <option value="New Arrival">New Arrival</option>
+                                </Select>
+                            </div>
+                            <FormInput
+                                label="Occasion"
+                                value={form.occasion}
+                                onChange={(e) => setField('occasion', e.target.value)}
+                                error={errors.occasion}
+                                placeholder="Casual, office, party"
+                            />
+                            <div>
+                                <label className="mb-1 block text-xs font-black text-slate-600">Care Instruction</label>
+                                <textarea
+                                    value={form.care_instruction}
+                                    onChange={(e) => setField('care_instruction', e.target.value)}
+                                    className="min-h-20 w-full rounded-xl border border-slate-200 px-4 py-3 text-sm font-semibold outline-none focus:border-primary focus:ring-1 focus:ring-primary"
+                                    placeholder="Machine wash cold, do not bleach..."
+                                />
+                                {errors.care_instruction && <p className="mt-1 text-xs font-bold text-danger">{errors.care_instruction}</p>}
+                            </div>
+                        </div>
+                    </AdminCard>
+
+                    <AdminCard 
                         title="Shipping" 
                         icon={<Truck className="h-5 w-5 text-slate-400" />}
                     >
@@ -303,13 +395,6 @@ export default function AddProductPage({ categories = [], brands = [], status })
                                 onChange={(e) => setField('weight', e.target.value)}
                                 error={errors.weight}
                                 placeholder="0.00"
-                            />
-                            <FormInput
-                                label="Size"
-                                value={form.size}
-                                onChange={(e) => setField('size', e.target.value)}
-                                error={errors.size}
-                                placeholder="e.g., 10x20x30"
                             />
                             <FormInput
                                 label="Delivery Charge"

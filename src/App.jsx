@@ -2,17 +2,22 @@ import { useEffect, useMemo, useState } from 'react';
 import { BrowserRouter, Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import AdminDashboard from './pages/AdminDashboard';
 import AdminAnalyticsPage from './pages/analytics/AdminAnalyticsPage';
+import CustomerAnalyticsPage from './pages/analytics/CustomerAnalyticsPage';
 import AdminBannersPage from './pages/banners/AdminBannersPage';
 import AdminBrandsPage from './pages/brands/AdminBrandsPage';
+import AdminCampaignsPage from './pages/campaigns/AdminCampaignsPage';
+import EmailCampaignsPage from './pages/marketing/EmailCampaignsPage';
 import AdminCategoriesPage from './pages/categories/AdminCategoriesPage';
 import AdminContentPage from './pages/content/AdminContentPage';
 import AdminCouponsPage from './pages/coupons/AdminCouponsPage';
 import AdminOrderDetailsPage from './pages/orders/AdminOrderDetailsPage';
 import AdminOrdersPage from './pages/orders/AdminOrdersPage';
 import AdminPaymentsPage from './pages/payments/AdminPaymentsPage';
+import AdminProfilePage from './pages/profile/AdminProfilePage';
 import AddProductPage from './pages/products/AddProductPage';
 import EditProductPage from './pages/products/EditProductPage';
 import ProductsPage from './pages/products/ProductsPage';
+import ProductBundlesPage from './pages/products/ProductBundlesPage';
 import AdminRefundsPage from './pages/refunds/AdminRefundsPage';
 import AdminReviewsPage from './pages/reviews/AdminReviewsPage';
 import AdminSettingsPage from './pages/settings/AdminSettingsPage';
@@ -22,6 +27,7 @@ import AdminUsersPage from './pages/users/AdminUsersPage';
 import AdminDiscountsPage from './pages/discounts/AdminDiscountsPage';
 import AdminFlashSalesPage from './pages/flash-sales/AdminFlashSalesPage';
 import AdminInventoryPage from './pages/inventory/AdminInventoryPage';
+import StockAlertsPage from './pages/inventory/StockAlertsPage';
 import AdminNotificationsPage from './pages/notifications/AdminNotificationsPage';
 import AdminFeatureStatusPage from './pages/operations/AdminFeatureStatusPage';
 import AdminCatalogAttributesPage from './pages/attributes/AdminCatalogAttributesPage';
@@ -35,6 +41,7 @@ const routes = [
   { path: '/products', api: '/admin/products', component: ProductsPage },
   { path: '/products/add', api: '/admin/products/add', component: AddProductPage },
   { path: '/products/:id/edit', api: ({ id }) => `/admin/products/${id}/edit`, component: EditProductPage },
+  { path: '/product-bundles', api: '/admin/product-bundles', component: ProductBundlesPage },
   { path: '/categories', api: '/admin/categories', component: AdminCategoriesPage },
   { path: '/sub-categories', api: '/admin/sub-categories', component: AdminCategoriesPage },
   { path: '/brands', api: '/admin/brands', component: AdminBrandsPage },
@@ -45,6 +52,7 @@ const routes = [
   { path: '/materials', api: '/admin/materials', component: AdminCatalogAttributesPage },
   { path: '/product-questions', api: '/admin/product-questions', component: AdminFeatureStatusPage },
   { path: '/inventory', api: '/admin/inventory', component: AdminInventoryPage },
+  { path: '/stock-alerts', api: '/admin/stock-alerts', component: StockAlertsPage },
   { path: '/banners', api: '/admin/banners', component: AdminBannersPage },
   { path: '/orders', api: '/admin/orders', component: AdminOrdersPage },
   { path: '/pending-orders', api: '/admin/pending-orders', component: AdminOrdersPage },
@@ -52,7 +60,7 @@ const routes = [
   { path: '/shipped-orders', api: '/admin/shipped-orders', component: AdminOrdersPage },
   { path: '/delivered-orders', api: '/admin/delivered-orders', component: AdminOrdersPage },
   { path: '/cancelled-orders', api: '/admin/cancelled-orders', component: AdminOrdersPage },
-  { path: '/return-requests', api: '/admin/return-requests', component: AdminFeatureStatusPage },
+  { path: '/return-requests', api: '/admin/return-requests', component: AdminRefundsPage },
   { path: '/refund-requests', api: '/admin/refund-requests', component: AdminRefundsPage },
   { path: '/invoices', api: '/admin/invoices', component: AdminFeatureStatusPage },
   { path: '/orders/:id', api: ({ id }) => `/admin/orders/${id}`, component: AdminOrderDetailsPage },
@@ -60,7 +68,8 @@ const routes = [
   { path: '/coupons', api: '/admin/coupons', component: AdminCouponsPage },
   { path: '/discounts', api: '/admin/discounts', component: AdminDiscountsPage },
   { path: '/flash-sales', api: '/admin/flash-sales', component: AdminFlashSalesPage },
-  { path: '/campaigns', api: '/admin/campaigns', component: AdminFeatureStatusPage },
+  { path: '/campaigns', api: '/admin/campaigns', component: AdminCampaignsPage },
+  { path: '/email-campaigns', api: '/admin/email-campaigns', component: EmailCampaignsPage },
   { path: '/popups', api: '/admin/popups', component: AdminFeatureStatusPage },
   { path: '/newsletter', api: '/admin/newsletter', component: AdminFeatureStatusPage },
   { path: '/reviews', api: '/admin/reviews', component: AdminReviewsPage },
@@ -104,8 +113,10 @@ const routes = [
   { path: '/roles-permissions', api: '/admin/roles-permissions', component: AdminFeatureStatusPage },
   { path: '/activity-logs', api: '/admin/activity-logs', component: AdminFeatureStatusPage },
   { path: '/analytics', api: '/admin/analytics', component: AdminAnalyticsPage },
+  { path: '/customer-analytics', api: '/admin/customer-analytics', component: CustomerAnalyticsPage },
   { path: '/reports/:report', api: ({ report }) => `/admin/reports/${report}`, component: AdminFeatureStatusPage },
   { path: '/settings', api: '/admin/settings', component: AdminSettingsPage },
+  { path: '/profile', api: '/admin', component: AdminProfilePage },
   { path: '/general-settings', api: '/admin/settings', component: AdminSettingsPage },
   { path: '/logo-favicon', api: '/admin/logo-favicon', component: AdminFeatureStatusPage },
   { path: '/seo-settings', api: '/admin/settings', component: AdminSettingsPage },
@@ -147,11 +158,11 @@ function RouteLoader({ route }) {
     apiRequest(apiPath, { params: query })
       .then((props) => alive && setState({ loading: false, props, error: null }))
       .catch((error) => {
-        console.error('API Error:', error);
+        // Error logged in centralized error handler
         alive && setState({ 
           loading: false, 
           props: {}, 
-          error: error.message || 'Failed to load data. Please make sure the backend API is running at http://localhost:8000' 
+          error: error.message || 'Failed to load data. Please ensure the backend API is running' 
         });
       });
 
@@ -169,7 +180,7 @@ function RouteLoader({ route }) {
   }
 
   return (
-    <PageProvider value={{ props: { ...state.props, auth: { user: { name: 'Progotix Admin', email: 'admin@progotix.local' } } }, url: `/admin${location.pathname === '/' ? '' : location.pathname}` }}>
+    <PageProvider value={{ props: { ...state.props, auth: { user: { name: 'Kids Mela Admin', email: 'admin@kidsmela.local' } } }, url: `/admin${location.pathname === '/' ? '' : location.pathname}` }}>
       <RouterBridge />
       <Component {...state.props} />
     </PageProvider>

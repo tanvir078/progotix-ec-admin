@@ -3,7 +3,7 @@ import { useMemo, useState } from 'react';
 import AdminLayout, { AdminCard, StatusBadge } from '@/components/AdminLayout';
 import Button from '@/components/ui/Button';
 import FormInput from '@/components/ui/FormInput';
-import { ArrowLeft, CreditCard, MapPin, Package, RotateCcw, Truck, User } from 'lucide-react';
+import { ArrowLeft, CreditCard, Printer, Truck } from 'lucide-react';
 
 const orderStatuses = ['pending', 'confirmed', 'processing', 'completed', 'cancelled'];
 const paymentStatuses = ['unpaid', 'pending', 'paid', 'partially_refunded', 'refunded', 'failed'];
@@ -15,6 +15,19 @@ function money(value) {
 
 function line(...parts) {
   return parts.filter(Boolean).join(', ');
+}
+
+function optionValue(item, key) {
+  const options = item.options || {};
+  return options[key] || options[`selected_${key}`] || null;
+}
+
+function printDocument(type) {
+  document.body.dataset.print = type;
+  window.print();
+  window.setTimeout(() => {
+    delete document.body.dataset.print;
+  }, 250);
 }
 
 function AddressBlock({ title, data, fallback }) {
@@ -95,7 +108,23 @@ export default function AdminOrderDetailsPage({ order, status }) {
   };
 
   return (
-    <AdminLayout title={`Order ${order.display_number || `#${order.id}`}`} actions={<BackButton />}>
+    <AdminLayout
+      title={`Order ${order.display_number || `#${order.id}`}`}
+      actions={
+        <div className="flex gap-2">
+          <button type="button" onClick={() => printDocument('invoice')} className="flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-black text-white">
+            <Printer className="h-4 w-4" />
+            Invoice
+          </button>
+          <button type="button" onClick={() => printDocument('packing-slip')} className="flex items-center gap-2 rounded-xl bg-slate-900 px-4 py-2 text-sm font-black text-white">
+            <Printer className="h-4 w-4" />
+            Packing Slip
+          </button>
+          <BackButton />
+        </div>
+      }
+    >
+      <PrintStyles />
       {status && (
         <div className="mb-5 rounded-xl border border-success bg-success-light px-5 py-3 text-sm font-bold text-success-dark">
           {status}
@@ -132,8 +161,24 @@ export default function AdminOrderDetailsPage({ order, status }) {
                     <tr key={item.id}>
                       <td className="px-5 py-4">
                         <div className="flex items-center gap-3">
-                          {item.image_url && <img src={item.image_url} alt="" className="h-10 w-10 rounded-lg object-cover" />}
-                          <span className="font-black text-slate-900">{item.product_name}</span>
+                          {item.image_url && <img src={item.image_url} alt={`${item.name} product image`} className="h-10 w-10 rounded-lg object-cover" />}
+                          <div>
+                            <span className="font-black text-slate-900">{item.product_name}</span>
+                            {(optionValue(item, 'size') || optionValue(item, 'color')) && (
+                              <div className="mt-1 flex flex-wrap gap-1.5">
+                                {optionValue(item, 'size') && (
+                                  <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-black text-slate-700">
+                                    Size: {optionValue(item, 'size')}
+                                  </span>
+                                )}
+                                {optionValue(item, 'color') && (
+                                  <span className="rounded-full bg-rose-50 px-2 py-0.5 text-[10px] font-black text-rose-700">
+                                    Color: {optionValue(item, 'color')}
+                                  </span>
+                                )}
+                              </div>
+                            )}
+                          </div>
                         </div>
                       </td>
                       <td className="px-5 py-4 text-xs font-semibold text-slate-600">{item.sku || '-'}</td>
@@ -179,6 +224,14 @@ export default function AdminOrderDetailsPage({ order, status }) {
             <AddressBlock title="Shipping Address" data={order.shipping_snapshot} fallback={order.shipping_address} />
             <AddressBlock title="Billing Address" data={order.billing_snapshot} fallback={order.shipping_address} />
           </div>
+
+          {order.customer_note && (
+            <AdminCard title="Customer Checkout Notes">
+              <pre className="whitespace-pre-wrap rounded-xl bg-slate-50 p-4 text-sm font-semibold leading-6 text-slate-700">
+                {order.customer_note}
+              </pre>
+            </AdminCard>
+          )}
 
           <AdminCard title="Timeline">
             <div className="space-y-3">
@@ -253,6 +306,13 @@ export default function AdminOrderDetailsPage({ order, status }) {
           </AdminCard>
         </div>
       </div>
+
+      <div className="print-doc invoice-print hidden">
+        <InvoiceDocument order={order} customer={customer} netTotal={netTotal} />
+      </div>
+      <div className="print-doc packing-slip-print hidden">
+        <PackingSlipDocument order={order} customer={customer} />
+      </div>
     </AdminLayout>
   );
 }
@@ -285,6 +345,146 @@ function TotalRow({ label, value, strong = false, tone }) {
     <div className={`flex items-center justify-between ${strong ? 'border-t border-slate-200 pt-3 text-base font-black' : 'font-semibold'}`}>
       <span className="text-slate-600">{label}</span>
       <span className={color}>{value}</span>
+    </div>
+  );
+}
+
+function PrintStyles() {
+  return (
+    <style>{`
+      @media print {
+        body[data-print="invoice"] #root > div,
+        body[data-print="packing-slip"] #root > div {
+          background: white !important;
+        }
+        body[data-print="invoice"] .print-doc,
+        body[data-print="packing-slip"] .print-doc {
+          display: none !important;
+        }
+        body[data-print="invoice"] .invoice-print,
+        body[data-print="packing-slip"] .packing-slip-print {
+          display: block !important;
+        }
+        body[data-print="invoice"] .print\\:hidden,
+        body[data-print="packing-slip"] .print\\:hidden {
+          display: none !important;
+        }
+        body[data-print="invoice"] main > *:not(.invoice-print),
+        body[data-print="packing-slip"] main > *:not(.packing-slip-print) {
+          display: none !important;
+        }
+      }
+    `}</style>
+  );
+}
+
+function PrintHeader({ title, order }) {
+  return (
+    <div className="mb-8 flex items-start justify-between border-b border-slate-300 pb-5">
+      <div>
+        <h1 className="text-3xl font-black text-slate-950">Kids Mela</h1>
+        <p className="mt-1 text-sm font-semibold text-slate-600">Fashion Ecommerce</p>
+        <p className="text-sm font-semibold text-slate-600">Dhaka, Bangladesh</p>
+      </div>
+      <div className="text-right">
+        <p className="text-2xl font-black text-slate-950">{title}</p>
+        <p className="mt-1 text-sm font-bold text-slate-600">{order.display_number || `#${order.id}`}</p>
+        <p className="text-sm font-semibold text-slate-500">{new Date(order.created_at).toLocaleString()}</p>
+      </div>
+    </div>
+  );
+}
+
+function PrintAddress({ title, person, address }) {
+  return (
+    <div>
+      <h2 className="mb-2 text-xs font-black uppercase tracking-wide text-slate-500">{title}</h2>
+      <div className="rounded-xl border border-slate-200 p-4 text-sm font-semibold leading-6 text-slate-700">
+        <p className="font-black text-slate-950">{person.name || 'Customer'}</p>
+        <p>{person.phone || '-'}</p>
+        <p>{person.email || '-'}</p>
+        <p>{address}</p>
+      </div>
+    </div>
+  );
+}
+
+function InvoiceDocument({ order, customer, netTotal }) {
+  const shipping = order.shipping_snapshot || {};
+  const billing = order.billing_snapshot || {};
+
+  return (
+    <section className="mx-auto max-w-4xl bg-white p-8 text-slate-950">
+      <PrintHeader title="Invoice" order={order} />
+      <div className="grid grid-cols-2 gap-5">
+        <PrintAddress title="Bill To" person={customer} address={line(billing.address, billing.area, billing.city, billing.postcode, billing.country) || order.shipping_address} />
+        <PrintAddress title="Ship To" person={shipping} address={line(shipping.address, shipping.area, shipping.city, shipping.postcode, shipping.country) || order.shipping_address} />
+      </div>
+      <PrintItemsTable order={order} showMoney />
+      <div className="ml-auto mt-6 w-80 space-y-2 text-sm">
+        <TotalRow label="Subtotal" value={money(order.subtotal_amount)} />
+        <TotalRow label="Discount" value={`-${money(order.discount_amount)}`} tone="danger" />
+        <TotalRow label="Shipping" value={money(order.shipping_amount)} />
+        <TotalRow label="Tax" value={money(order.tax_amount)} />
+        <TotalRow label="Total" value={money(order.total_amount)} strong />
+        <TotalRow label="Refunded" value={money(order.refunded_amount)} tone="danger" />
+        <TotalRow label="Net" value={money(netTotal)} strong />
+      </div>
+      {order.customer_note && <PrintNote title="Customer Notes" note={order.customer_note} />}
+    </section>
+  );
+}
+
+function PackingSlipDocument({ order, customer }) {
+  const shipping = order.shipping_snapshot || {};
+
+  return (
+    <section className="mx-auto max-w-4xl bg-white p-8 text-slate-950">
+      <PrintHeader title="Packing Slip" order={order} />
+      <div className="grid grid-cols-2 gap-5">
+        <PrintAddress title="Customer" person={customer} address={customer.phone || '-'} />
+        <PrintAddress title="Delivery Address" person={shipping} address={line(shipping.address, shipping.area, shipping.city, shipping.postcode, shipping.country) || order.shipping_address} />
+      </div>
+      <PrintItemsTable order={order} />
+      {order.customer_note && <PrintNote title="Fulfillment Notes" note={order.customer_note} />}
+    </section>
+  );
+}
+
+function PrintItemsTable({ order, showMoney = false }) {
+  return (
+    <table className="mt-8 min-w-full border border-slate-300 text-left text-sm">
+      <thead className="bg-slate-100 text-xs font-black uppercase tracking-wide text-slate-600">
+        <tr>
+          <th className="border border-slate-300 px-3 py-3">Product</th>
+          <th className="border border-slate-300 px-3 py-3">SKU</th>
+          <th className="border border-slate-300 px-3 py-3">Variant</th>
+          <th className="border border-slate-300 px-3 py-3">Qty</th>
+          {showMoney && <th className="border border-slate-300 px-3 py-3 text-right">Total</th>}
+        </tr>
+      </thead>
+      <tbody>
+        {order.items?.map((item) => (
+          <tr key={item.id}>
+            <td className="border border-slate-300 px-3 py-3 font-bold">{item.product_name}</td>
+            <td className="border border-slate-300 px-3 py-3">{item.sku || '-'}</td>
+            <td className="border border-slate-300 px-3 py-3">
+              {[optionValue(item, 'size') && `Size ${optionValue(item, 'size')}`, optionValue(item, 'color')].filter(Boolean).join(' / ') || '-'}
+            </td>
+            <td className="border border-slate-300 px-3 py-3 font-black">{item.quantity}</td>
+            {showMoney && <td className="border border-slate-300 px-3 py-3 text-right font-black">{money(item.line_total)}</td>}
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  );
+}
+
+function PrintNote({ title, note }) {
+  return (
+    <div className="mt-8">
+      <h2 className="mb-2 text-xs font-black uppercase tracking-wide text-slate-500">{title}</h2>
+      <pre className="whitespace-pre-wrap rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm font-semibold leading-6 text-slate-700">{note}</pre>
     </div>
   );
 }

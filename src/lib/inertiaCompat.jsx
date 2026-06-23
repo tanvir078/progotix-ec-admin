@@ -14,7 +14,7 @@ export function usePage() {
 
 export function Head({ title }) {
   if (title) {
-    document.title = `${title} - Progotix Admin`;
+    document.title = `${title} - Kids Mela Admin`;
   }
   return null;
 }
